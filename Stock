@@ -1,0 +1,198 @@
+#Alaysha Randall 
+#Software Enginnering
+#August 30th
+
+#DISPLAY MAIN MENU - DONE
+#DISPLAY SUB MENU - DONE
+#accpet all kinds of inputs 
+#output the stock ticker
+# new price - done
+# actual price
+# % change - done
+# old price
+#positive , negative , percentage sign done 
+
+
+
+
+
+
+
+
+
+
+import random  #random library will allow to do option 2 on submenu
+import yfinance as yf #access stock live prices 
+from yahoo_fin import stock_info #library to retrieve all tickers(symbols)
+from sense_emu import SenseHat #library for sense hat emulator 
+
+
+
+sense = SenseHat() # Initialize SenseHat
+sense.clear()  #after info is display clear the board
+
+
+# Function to get live stock data
+
+def stockdata(symbol):
+    
+    try:
+        #ticker object for the stock symbol
+        
+        #import yf allows us to use yf as a varibale which uses 'ticker' object for the specific stock symbol from the yfiance library
+       
+        
+
+        stockbymin = yf.Ticker(symbol) #variable for stocksymbol
+        period = "1d" #variable for to pull day for this day
+        interval = "1m" #variable for the time interval
+
+        #variable t fetch data
+        #this variable will fetch data from the period of a day in the interval of 1 minute 
+        data = stockbymin.history(period , interval)
+        #retrieve the data from that day every minute 
+        return data
+    except:
+        #if data is not working please display to terminal
+        error_message = "Failed to fetch live data for " + symbol
+        print(error_message)
+        
+        #this will not return anything
+        return None
+
+
+# Function to format and display data on Sense HAT LED matrix
+#function to pass along data
+
+def sensehatdisplay(symbol,data):
+    # Get the closing price
+    #.values is the first name in the array for that column, use index [0] to access the first memory location of the recent closing price 
+    new_price = data["Close"].values[0]
+    #same for opening 
+    # Get the opening price
+    old_price = data["Open"].values[0]
+    # Calculate the actual price change 
+    actual_change = new_price - old_price
+    #divide it by the old price, and then multiply by 100 to express it as a percentage.
+    percent_change = ((new_price - old_price) / old_price) * 100
+
+    # Convert the variable actual_change to a string rounded to two decimal places
+    actual_change_str = str(round(actual_change , 2))
+    # Convert the variable percent_change to a string rounded to two decimal places and add '%' at the end
+    percent_change_str= str(round(percent_change , 2)) + "%"
+
+    # Check if actual_change is positive, negative, or zero
+    if actual_change > 0:
+        actual_change_str = f"+{actual_change_str}"
+    elif actual_change < 0:
+        actual_change_str = f"{actual_change_str}"  # No need to add a plus sign for negative values
+
+# Check if percent_change is positive, negative, or zero
+    if percent_change > 0:
+        percent_change_str = f"+ {percent_change_str}"
+    elif percent_change < 0:
+        percent_change_str = f" {percent_change_str}"  # No need to add a plus sign for negative values
+
+# Symbol ticker prints out in upper case letters
+    symbol = symbol.upper()
+
+    text = f"{symbol}\n New Price: {new_price:.2f}\n Actual Change: {actual_change_str}\n % Change: {percent_change_str} \n old price: {old_price:.2f}"
+
+# Display text, control speed, and change color
+# Use sense.show_message to show the message on the LED matrix
+    sense.show_message(text, scroll_speed=0.25, text_colour=[255, 192, 203])
+
+
+#while this is true the following menu will display for the major indices
+while True:
+    #main menui
+    print("Main Menu:")
+    print("1. NASDAQ")
+    print("2. DJIA")
+    print("3. NYSE")
+    print("4. EXIT")
+        
+    choice = input("Select an option from 1-3:  ") #allow user to pick from 1-4
+        
+    #if choice == to 4 end program     
+    if choice == "4":
+        break
+    #array for unknown amount of symbols     
+    symbols = []
+    
+    if choice == "1":
+        #if choice is eqal to 1 symbols will be the tickers from nasdaq companies
+        symbols = stock_info.tickers_nasdaq()  
+        #stock_info allows us to get a list of symbols from dow jones
+
+    elif choice == "2":
+        symbols = stock_info.tickers_dow()  
+        #symbols for dow
+    elif choice == "3":
+        #symbols for nyse and more
+         
+        symbols = stock_info.tickers_other()
+        # Extract NYSE tickers
+        nyse_tickers = [ticker for ticker in symbols if 'NYSE' in ticker]
+        print(nyse_tickers)
+    elif choice == "4":
+        break
+        
+    else:
+        #loop will continue to next menu and data will be stored in choice
+        continue
+
+        # while this is true please print the sub memu , search by symbol, display random, display all symbols
+    while True:
+        print("-------------------------------")
+        print("\nSub Menu:")
+        print("1. Search by Symbol")
+        print("2. Display Random Symbol")
+        print("3. Display All Symbols")
+        print("4. Back to Main Menu to EXIT")
+        print("-------------------------------")
+        
+        
+        choice = input("Select an option: ")
+        
+        if choice == "1":
+            #input will convert whatever case to upper so mixed, upper, lower will all be accepted 
+            symbol = input("Enter stock symbol with length of 3,4 or 5 characters: ").upper()
+            #if the symbol inputed is in the tickers 
+            if symbol in symbols:
+                #make a variable for the data that will call my live data function that will fetch the given symbol
+                live_data = stockdata(symbol)
+                #testcheck
+                #if live data is none then please print the following symbol along with its live data
+                if not live_data.empty:
+                    sensehatdisplay(symbol, live_data)
+                    #test check please print following if data cannot be fetched
+                else:
+                    print("ERROR DATA NOT LOADING")
+            else:
+                print("Symbol not in the indices") #is that symbol is not in the major stock print message
+    
+        elif choice == "2":
+            random_symbol = random.choice(symbols)#random.(choice) will randomized the tickers stored in symbols 
+
+            live_data = stockdata(random_symbol)
+        #if live data is none then the sensehatdisplay WILL DISPLAY .....
+            if live_data is not None:
+               # RANDOM SYMBOL ALONG WITH THE LIVE DATA FOR IT )
+                sensehatdisplay(random_symbol, live_data)
+            else:
+                #TEST ERROR IF DATA IS NOT Available pleasse display following message
+                print("Unable to fetch data") #another check 
+        #option 3 which display all stocks for a given idice
+        elif choice == "3":
+            for symbol in symbols:
+                live_data = stockdata(symbol)
+                #if symbol is equal to the following tickers symbol, please print delisted and continue
+                if symbol == ["AACI","AAC","AAC.U"]:
+                    print("delisted")
+                    continue 
+                #this is prompt if else to continue if program runs into a index that is delisted and has not beem removed from yahoo finance library yet 
+                if live_data is not None:
+                    sensehatdisplay(symbol, live_data)
+        else:
+            break #break if else
